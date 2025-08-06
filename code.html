@@ -2,12 +2,21 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Inspection Map</title>
+    <title>ArcGIS Map in Joget</title>
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    
+    <!-- ArcGIS CSS and JS -->
     <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.29/"></script>
+
+    <!-- Map Styling -->
     <style>
-      html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
+      html, body, #viewDiv {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
       #sketchDiv {
         position: absolute;
         top: 10px;
@@ -18,21 +27,16 @@
         border-radius: 6px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       }
-      #saveBtn {
-        margin-top: 10px;
-      }
     </style>
   </head>
 
   <body>
+    <!-- Map container -->
     <div id="viewDiv"></div>
-    <div id="sketchDiv">
-      <button id="saveBtn">Save Sketch</button>
-    </div>
+    <!-- Sketch tool container -->
+    <div id="sketchDiv"></div>
 
-    <!-- Hidden Joget field to store map sketch -->
-    <input type="hidden" id="sketchData" name="sketchData" value="" />
-
+    <!-- ArcGIS logic -->
     <script>
       require([
         "esri/Map",
@@ -41,43 +45,49 @@
         "esri/layers/GraphicsLayer"
       ], function(Map, MapView, Sketch, GraphicsLayer) {
 
+        // Create graphics layer for drawing
         const graphicsLayer = new GraphicsLayer();
+
+        // Create the map
         const map = new Map({
           basemap: "topo-vector",
           layers: [graphicsLayer]
         });
 
+        // Create the map view
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4],
+          center: [31.8, 30.4], // Adjust to your location
           zoom: 8
         });
 
+        // Add the sketch widget
         const sketch = new Sketch({
           layer: graphicsLayer,
           view: view,
           creationMode: "update",
-          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+          availableCreateTools: ["point"],
           container: "sketchDiv"
         });
 
-        // Load existing sketch from Joget field
-        const sketchDataField = document.getElementById("sketchData");
-        if (sketchDataField && sketchDataField.value) {
-          const savedGraphics = JSON.parse(sketchDataField.value);
-          savedGraphics.forEach(json => {
-            graphicsLayer.add(graphicsLayer.graphics.fromJSON(json));
-          });
-        }
+        // Capture point geometry on completion
+        sketch.on("create", function(event) {
+          if (event.state === "complete") {
+            const geometry = event.graphic.geometry;
+            const lon = geometry.longitude;
+            const lat = geometry.latitude;
 
-        // Save sketch button
-        document.getElementById("saveBtn").addEventListener("click", function() {
-          const sketches = graphicsLayer.graphics.map(g => g.toJSON());
-          sketchDataField.value = JSON.stringify(sketches);
-          alert("Sketch saved to form.");
+            // Send to parent (useful if embedded in an iframe inside a Joget form)
+            window.parent.postMessage(
+              {
+                type: "coordinateSelected",
+                coordinates: `${lat.toFixed(6)}, ${lon.toFixed(6)}`
+              },
+              "*"
+            );
+          }
         });
-
       });
     </script>
   </body>
