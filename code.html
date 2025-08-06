@@ -38,57 +38,68 @@
 
     <!-- ArcGIS logic -->
     <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer"
-      ], function(Map, MapView, Sketch, GraphicsLayer) {
+  require([
+    "esri/Map",
+    "esri/views/MapView",
+    "esri/widgets/Sketch",
+    "esri/layers/GraphicsLayer"
+  ], function(Map, MapView, Sketch, GraphicsLayer) {
+    const graphicsLayer = new GraphicsLayer();
 
-        // Create graphics layer for drawing
-        const graphicsLayer = new GraphicsLayer();
+    const map = new Map({
+      basemap: "topo-vector",
+      layers: [graphicsLayer]
+    });
 
-        // Create the map
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
+    const view = new MapView({
+      container: "viewDiv",
+      map: map,
+      center: [31.8, 30.4], // default center
+      zoom: 8
+    });
+
+    const sketch = new Sketch({
+      layer: graphicsLayer,
+      view: view,
+      creationMode: "update",
+      availableCreateTools: ["point"],
+      container: "sketchDiv"
+    });
+
+    // Automatically center map on user's current location
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        view.goTo({
+          center: [lon, lat],
+          zoom: 14
         });
-
-        // Create the map view
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [31.8, 30.4], // Adjust to your location
-          zoom: 8
-        });
-
-        // Add the sketch widget
-        const sketch = new Sketch({
-          layer: graphicsLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["point"],
-          container: "sketchDiv"
-        });
-
-        // Capture point geometry on completion
-        sketch.on("create", function(event) {
-          if (event.state === "complete") {
-            const geometry = event.graphic.geometry;
-            const lon = geometry.longitude;
-            const lat = geometry.latitude;
-
-            // Send to parent (useful if embedded in an iframe inside a Joget form)
-            window.parent.postMessage(
-              {
-                type: "coordinateSelected",
-                coordinates: `${lat.toFixed(6)}, ${lon.toFixed(6)}`
-              },
-              "*"
-            );
-          }
-        });
+      }, function(error) {
+        console.warn("Geolocation failed:", error.message);
       });
-    </script>
+    }
+
+    // Send coordinates to Joget when a point is selected
+    sketch.on("create", function(event) {
+      if (event.state === "complete") {
+        const geometry = event.graphic.geometry;
+        const lon = geometry.longitude;
+        const lat = geometry.latitude;
+
+        window.parent.postMessage(
+          {
+            type: "coordinateSelected",
+            coordinates: `${lat.toFixed(6)}, ${lon.toFixed(6)}`
+          },
+          "*"
+        );
+      }
+    });
+  });
+</script>
+
   </body>
 </html>
+
