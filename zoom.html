@@ -2,36 +2,99 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Zoom Map</title>
+    <title>ArcGIS Sketch Map</title>
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
     <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.29/"></script>
     <style>
       html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
+      #sketchDiv {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 99;
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      }
+      #saveBtn {
+        margin-top: 8px;
+        display: block;
+      }
     </style>
   </head>
+
   <body>
     <div id="viewDiv"></div>
+    <div id="sketchDiv">
+      <strong>Draw Tools</strong><br/>
+      <button id="saveBtn"> Save Sketch</button>
+    </div>
+
+    <!-- Hidden Joget fields -->
+    <input type="hidden" id="sketchData" name="sketchData" value="" />
+    <input type="hidden" id="coordinates" name="coordinates" value="" />
+
     <script>
-      require(["esri/Map", "esri/views/MapView"], function(Map, MapView) {
-        const map = new Map({ basemap: "topo-vector" });
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/widgets/Sketch",
+        "esri/layers/GraphicsLayer"
+      ], function(Map, MapView, Sketch, GraphicsLayer) {
+
+        const graphicsLayer = new GraphicsLayer();
+        const map = new Map({
+          basemap: "topo-vector",
+          layers: [graphicsLayer]
+        });
 
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4],  // default center
+          center: [31.8, 30.4],
           zoom: 8
         });
 
-        // Listen for zoom instructions from Joget
-        window.addEventListener("message", function(event) {
-          if (event.data && event.data.type === "zoomToLocation") {
-            const lat = event.data.lat;
-            const lon = event.data.lon;
-            view.goTo({
-              center: [lon, lat],
-              zoom: 14
+        const sketch = new Sketch({
+          layer: graphicsLayer,
+          view: view,
+          creationMode: "update",
+          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+          container: "sketchDiv"
+        });
+
+        // Load saved sketch if exists
+        const sketchDataField = document.getElementById("sketchData");
+        if (sketchDataField && sketchDataField.value) {
+          try {
+            const savedGraphics = JSON.parse(sketchDataField.value);
+            savedGraphics.forEach(json => {
+              graphicsLayer.add(graphicsLayer.graphics.fromJSON(json));
             });
+          } catch (err) {
+            console.warn("Invalid sketch data:", err);
+          }
+        }
+
+        //  Save sketch + coordinates
+        document.getElementById("saveBtn").addEventListener("click", function() {
+          const sketches = graphicsLayer.graphics.map(g => g.toJSON());
+          document.getElementById("sketchData").value = JSON.stringify(sketches);
+          alert(" Sketch saved to form.");
+        });
+
+        //  When point is added, capture lat/lon
+        sketch.on("create", function(event) {
+          if (event.state === "complete") {
+            const geom = event.graphic.geometry;
+            if (geom.type === "point") {
+              const lat = geom.latitude.toFixed(6);
+              const lon = geom.longitude.toFixed(6);
+              document.getElementById("coordinates").value = `${lat},${lon}`;
+              console.log("Coordinates captured:", lat, lon);
+            }
           }
         });
       });
