@@ -4,19 +4,10 @@
     <meta charset="utf-8" />
     <title>ArcGIS Map in Joget</title>
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-    
-    <!-- ArcGIS CSS and JS -->
     <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.29/"></script>
-
-    <!-- Map Styling -->
     <style>
-      html, body, #viewDiv {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-
+      html, body, #viewDiv { height: 100%; margin: 0; padding: 0; }
       #sketchDiv {
         position: absolute;
         top: 10px;
@@ -25,70 +16,59 @@
         background: white;
         padding: 10px;
         border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       }
     </style>
   </head>
-
   <body>
-    <!-- Map container -->
     <div id="viewDiv"></div>
-    <!-- Sketch tool container -->
     <div id="sketchDiv"></div>
-
-    <!-- ArcGIS logic -->
     <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer"
-      ], function(Map, MapView, Sketch, GraphicsLayer) {
+  require([
+    "esri/Map",
+    "esri/views/MapView",
+    "esri/widgets/Sketch",
+    "esri/layers/GraphicsLayer"
+  ], function(Map, MapView, Sketch, GraphicsLayer) {
+    const graphicsLayer = new GraphicsLayer();
 
-        // Create graphics layer for drawing
-        const graphicsLayer = new GraphicsLayer();
+    const map = new Map({
+      basemap: "topo-vector",
+      layers: [graphicsLayer]
+    });
 
-        // Create the map
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
-        });
+    const view = new MapView({
+      container: "viewDiv",
+      map: map,
+      center: [31.8, 30.4],  // Default center
+      zoom: 8
+    });
 
-        // Create the map view
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [31.8, 30.4], // Adjust to your location
-          zoom: 8
-        });
+    const sketch = new Sketch({
+      layer: graphicsLayer,
+      view: view,
+      creationMode: "update",
+      availableCreateTools: ["point"],
+      container: "sketchDiv"
+    });
 
-        // Add the sketch widget
-        const sketch = new Sketch({
-          layer: graphicsLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["point"],
-          container: "sketchDiv"
-        });
+    sketch.on("create", function(event) {
+      if (event.state === "complete") {
+        const geometry = event.graphic.geometry;
+        const lon = geometry.longitude;
+        const lat = geometry.latitude;
 
-        // Capture point geometry on completion
-        sketch.on("create", function(event) {
-          if (event.state === "complete") {
-            const geometry = event.graphic.geometry;
-            const lon = geometry.longitude;
-            const lat = geometry.latitude;
+        // Send selected coordinates back to Joget form
+        window.parent.postMessage(
+          {
+            type: "coordinateSelected",
+            coordinates: `${lat.toFixed(6)}, ${lon.toFixed(6)}`
+          },
+          "*"
+        );
+      }
+    });
+  });
+</script>
 
-            // Send to parent (useful if embedded in an iframe inside a Joget form)
-            window.parent.postMessage(
-              {
-                type: "coordinateSelected",
-                coordinates: `${lat.toFixed(6)}, ${lon.toFixed(6)}`
-              },
-              "*"
-            );
-          }
-        });
-      });
-    </script>
   </body>
 </html>
