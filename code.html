@@ -2,16 +2,21 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>ArcGIS Map in Joget (with GPS)</title>
+    <title>ArcGIS Map in Joget</title>
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+    
+    <!-- ArcGIS CSS and JS -->
     <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.29/"></script>
+
+    <!-- Map Styling -->
     <style>
       html, body, #viewDiv {
         height: 100%;
         margin: 0;
         padding: 0;
       }
+
       #sketchDiv {
         position: absolute;
         top: 10px;
@@ -20,59 +25,44 @@
         background: white;
         padding: 10px;
         border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      }
-      #locateBtn {
-        display: block;
-        margin-top: 8px;
-        padding: 8px 12px;
-        background-color: #0079c1;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        width: 100%;
-      }
-      #locateBtn:hover {
-        background-color: #005f90;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       }
     </style>
   </head>
+
   <body>
+    <!-- Map container -->
     <div id="viewDiv"></div>
-    <div id="sketchDiv">
-      <button id="locateBtn">📍 Find My Location</button>
-    </div>
+    <!-- Sketch tool container -->
+    <div id="sketchDiv"></div>
 
+    <!-- ArcGIS logic -->
     <script>
-      let __esri; // Will hold the Graphic module
-
-      // Load Graphic separately
-      require(["esri/Graphic"], function(Graphic) {
-        __esri = { Graphic: Graphic };
-      });
-
       require([
         "esri/Map",
         "esri/views/MapView",
         "esri/widgets/Sketch",
         "esri/layers/GraphicsLayer"
       ], function(Map, MapView, Sketch, GraphicsLayer) {
+
+        // Create graphics layer for drawing
         const graphicsLayer = new GraphicsLayer();
 
+        // Create the map
         const map = new Map({
           basemap: "topo-vector",
           layers: [graphicsLayer]
         });
 
+        // Create the map view
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4], // Default center
+          center: [31.8, 30.4], // Adjust to your location
           zoom: 8
         });
 
+        // Add the sketch widget
         const sketch = new Sketch({
           layer: graphicsLayer,
           view: view,
@@ -81,13 +71,14 @@
           container: "sketchDiv"
         });
 
-        // Handle point selection and send to Joget
+        // Capture point geometry on completion
         sketch.on("create", function(event) {
           if (event.state === "complete") {
             const geometry = event.graphic.geometry;
             const lon = geometry.longitude;
             const lat = geometry.latitude;
 
+            // Send to parent (useful if embedded in an iframe inside a Joget form)
             window.parent.postMessage(
               {
                 type: "coordinateSelected",
@@ -95,47 +86,6 @@
               },
               "*"
             );
-          }
-        });
-
-        // 📍 Find My Location button logic
-        document.getElementById("locateBtn").addEventListener("click", function () {
-          if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function (position) {
-              const lat = position.coords.latitude;
-              const lon = position.coords.longitude;
-
-              // Move the map to the current location
-              view.goTo({
-                center: [lon, lat],
-                zoom: 14
-              });
-
-              // Add a blue point marker
-              const point = {
-                type: "point",
-                latitude: lat,
-                longitude: lon
-              };
-
-              const symbol = {
-                type: "simple-marker",
-                style: "circle",
-                color: "blue",
-                size: "12px"
-              };
-
-              const graphic = new __esri.Graphic({
-                geometry: point,
-                symbol: symbol
-              });
-
-              graphicsLayer.add(graphic);
-            }, function (error) {
-              alert("Unable to retrieve your location: " + error.message);
-            });
-          } else {
-            alert("Geolocation is not supported by your browser.");
           }
         });
       });
