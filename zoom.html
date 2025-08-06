@@ -15,18 +15,23 @@
     <script>
       require(["esri/Map", "esri/views/MapView"], function(Map, MapView) {
         const map = new Map({ basemap: "topo-vector" });
+
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [31.8, 30.4],
+          center: [31.8, 30.4],  // default center
           zoom: 8
         });
 
         // Listen for zoom instructions from Joget
         window.addEventListener("message", function(event) {
           if (event.data && event.data.type === "zoomToLocation") {
-            const { lat, lon } = event.data;
-            view.goTo({ center: [lon, lat], zoom: 14 });
+            const lat = event.data.lat;
+            const lon = event.data.lon;
+            view.goTo({
+              center: [lon, lat],
+              zoom: 14
+            });
           }
         });
       });
