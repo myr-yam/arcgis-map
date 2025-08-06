@@ -23,34 +23,36 @@
     <div id="viewDiv"></div>
     <div id="sketchDiv"></div>
     <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/widgets/Sketch",
-        "esri/layers/GraphicsLayer"
-      ], function(Map, MapView, Sketch, GraphicsLayer) {
-        const graphicsLayer = new GraphicsLayer();
+      js  require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/Sketch",
+  "esri/layers/GraphicsLayer"
+], function(Map, MapView, Sketch, GraphicsLayer) {
 
-        const map = new Map({
-          basemap: "topo-vector",
-          layers: [graphicsLayer]
-        });
+  const graphicsLayer = new GraphicsLayer();
 
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [39.8, 21.4],
-          zoom: 10
-        });
+  const map = new Map({
+    basemap: "topo-vector",
+    layers: [graphicsLayer]
+  });
 
-        const sketch = new Sketch({
-          layer: graphicsLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
-          container: "sketchDiv"
-        });
-      });
+  const view = new MapView({
+    container: "viewDiv",
+    map: map,
+    center: [39.8, 21.4],
+    zoom: 10
+  });
+
+  const sketch = new Sketch({
+    layer: graphicsLayer,
+    view: view,
+    creationMode: "update",
+    availableCreateTools: ["point", "polyline", "polygon", "rectangle", "circle"],
+    container: "sketchDiv" 
+  });
+});
     </script>
   </body>
 </html>
+
